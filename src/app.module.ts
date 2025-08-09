@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CrawlingModule } from './crawling/crawling.module';
 import { SlackModule } from './slack/slack.module';
+import { ThreadModule } from './thread/thread.module';
 
 @Module({
   imports: [
@@ -12,7 +13,8 @@ import { SlackModule } from './slack/slack.module';
       envFilePath: '.env'
     }),
     CrawlingModule, 
-    SlackModule
+    SlackModule,
+    ThreadModule
   ],
   controllers: [AppController],
   providers: [AppService],
