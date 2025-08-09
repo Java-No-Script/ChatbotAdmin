@@ -1,4 +1,5 @@
 import { Controller, Get, Put, Delete, Post, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, Min, Max, IsArray } from 'class-validator';
 import { SlackService, SlackMessage, SlackMessageStats } from './slack.service';
 
@@ -76,11 +77,18 @@ export interface ChannelListResponse {
   timestamp: Date;
 }
 
+@ApiTags('slack')
 @Controller('slack')
 export class SlackController {
   constructor(private readonly slackService: SlackService) {}
 
   @Get('messages')
+  @ApiOperation({ summary: 'Get bot messages from Slack channels' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved bot messages' })
+  @ApiQuery({ name: 'channelId', required: false, description: 'Slack channel ID' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Number of messages to retrieve' })
+  @ApiQuery({ name: 'oldest', required: false, description: 'Oldest message timestamp' })
+  @ApiQuery({ name: 'latest', required: false, description: 'Latest message timestamp' })
   async getBotMessages(
     @Query('channelId') channelId?: string,
     @Query('limit') limit?: string,
@@ -119,6 +127,9 @@ export class SlackController {
   }
 
   @Put('messages')
+  @ApiOperation({ summary: 'Update a Slack message' })
+  @ApiResponse({ status: 200, description: 'Successfully updated message' })
+  @ApiBody({ type: UpdateMessageRequest })
   async updateMessage(@Body() request: UpdateMessageRequest): Promise<MessageActionResponse> {
     const success = await this.slackService.updateMessage(
       request.channelId,
@@ -208,5 +219,26 @@ export class SlackController {
       success: true,
       timestamp: new Date()
     };
+  }
+
+  @Get('test-auth')
+  @ApiOperation({ summary: 'Test Slack bot authentication' })
+  @ApiResponse({ status: 200, description: 'Authentication test result' })
+  async testAuth(): Promise<{ success: boolean; message: string; botInfo?: any; timestamp: Date }> {
+    try {
+      const botInfo = await this.slackService.testAuth();
+      return {
+        success: true,
+        message: 'Slack 인증 성공',
+        botInfo,
+        timestamp: new Date()
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Slack 인증 실패: ${error.message}`,
+        timestamp: new Date()
+      };
+    }
   }
 }

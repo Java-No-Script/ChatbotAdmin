@@ -35,17 +35,24 @@ export class SlackService {
   private botUserId: string | null = null;
 
   constructor() {
-    this.client = new WebClient(slackConfig.token);
+    const token = process.env.SLACK_BOT_TOKEN || '';
+    console.log('SLACK_BOT_TOKEN 환경변수:', process.env.SLACK_BOT_TOKEN);
+    console.log('사용할 토큰:', token);
+    this.client = new WebClient(token);
     this.initializeBotInfo();
   }
 
   private async initializeBotInfo(): Promise<void> {
     try {
+      this.logger.log('Slack 봇 인증 테스트 시작...');
+      this.logger.log(`사용중인 토큰: ${slackConfig.token.substring(0, 20)}...`);
+      
       const auth = await this.client.auth.test();
       this.botUserId = auth.user_id as string;
-      this.logger.log(`봇 초기화 완료. Bot User ID: ${this.botUserId}`);
+      this.logger.log(`봇 초기화 완료. Bot User ID: ${this.botUserId}, Team: ${auth.team}`);
     } catch (error) {
       this.logger.error('봇 정보 초기화 실패:', error);
+      this.logger.error('토큰 확인 필요:', slackConfig.token ? '토큰 있음' : '토큰 없음');
     }
   }
 
@@ -321,6 +328,25 @@ export class SlackService {
     } catch (error) {
       this.logger.error('채널 목록 조회 오류:', error);
       return [];
+    }
+  }
+
+  async testAuth(): Promise<any> {
+    try {
+      const auth = await this.client.auth.test();
+      this.logger.log('Slack 인증 테스트 성공:', auth);
+      return {
+        ok: auth.ok,
+        team: auth.team,
+        user: auth.user,
+        team_id: auth.team_id,
+        user_id: auth.user_id,
+        bot_id: auth.bot_id,
+        url: auth.url
+      };
+    } catch (error) {
+      this.logger.error('Slack 인증 테스트 실패:', error);
+      throw error;
     }
   }
 }

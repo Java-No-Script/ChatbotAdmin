@@ -26,6 +26,7 @@
     "@nestjs/config": "^3.1.1",
     "@nestjs/core": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/swagger": "^7.4.2",
     "@slack/web-api": "^7.9.3",
     "axios": "^1.6.0",
     "cheerio": "^1.0.0-rc.12",
@@ -35,7 +36,8 @@
     "pg": "^8.11.3",
     "puppeteer-core": "^21.5.2",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

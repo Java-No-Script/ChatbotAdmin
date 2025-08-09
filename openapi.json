@@ -1,0 +1,441 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/crawling/crawl": {
+      "post": {
+        "operationId": "CrawlingController_crawlUrl",
+        "summary": "Basic web page crawling",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrawlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully crawled the webpage"
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/advanced-crawl": {
+      "post": {
+        "operationId": "CrawlingController_crawlWebsiteWithEmbedding",
+        "summary": "Advanced website crawling with embeddings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvancedCrawlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully crawled website and generated embeddings"
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/search": {
+      "post": {
+        "operationId": "CrawlingController_searchSimilar",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/batch-crawl": {
+      "post": {
+        "operationId": "CrawlingController_batchCrawl",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/status/{jobId}": {
+      "get": {
+        "operationId": "CrawlingController_getCrawlStatus",
+        "parameters": [
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/results/{jobId}": {
+      "get": {
+        "operationId": "CrawlingController_getCrawlResults",
+        "parameters": [
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/slack/messages": {
+      "get": {
+        "operationId": "SlackController_getBotMessages",
+        "summary": "Get bot messages from Slack channels",
+        "parameters": [
+          {
+            "name": "channelId",
+            "required": false,
+            "in": "query",
+            "description": "Slack channel ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of messages to retrieve",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oldest",
+            "required": false,
+            "in": "query",
+            "description": "Oldest message timestamp",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "latest",
+            "required": false,
+            "in": "query",
+            "description": "Latest message timestamp",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved bot messages"
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      },
+      "put": {
+        "operationId": "SlackController_updateMessage",
+        "summary": "Update a Slack message",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated message"
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      },
+      "delete": {
+        "operationId": "SlackController_deleteMessage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      },
+      "post": {
+        "operationId": "SlackController_sendMessage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      }
+    },
+    "/slack/messages/{channelId}/{timestamp}": {
+      "get": {
+        "operationId": "SlackController_getMessageDetails",
+        "parameters": [
+          {
+            "name": "channelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestamp",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      },
+      "delete": {
+        "operationId": "SlackController_deleteMessageByParams",
+        "parameters": [
+          {
+            "name": "channelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestamp",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      }
+    },
+    "/slack/channels": {
+      "get": {
+        "operationId": "SlackController_getChannelList",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      }
+    },
+    "/slack/stats": {
+      "get": {
+        "operationId": "SlackController_getBotStats",
+        "parameters": [
+          {
+            "name": "channelId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      }
+    },
+    "/slack/test-auth": {
+      "get": {
+        "operationId": "SlackController_testAuth",
+        "summary": "Test Slack bot authentication",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Authentication test result"
+          }
+        },
+        "tags": [
+          "slack"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Chatbot Admin API",
+    "description": "NestJS chatbot admin application with Slack integration and web crawling",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "crawling",
+      "description": "Web crawling operations"
+    },
+    {
+      "name": "slack",
+      "description": "Slack bot message management"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CrawlRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "AdvancedCrawlRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "SearchRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateMessageRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "DeleteMessageRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

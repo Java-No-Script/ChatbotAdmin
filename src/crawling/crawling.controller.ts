@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, Min, Max } from 'class-validator';
 import { CrawlingService, AdvancedCrawlResult } from './crawling.service';
 
@@ -46,11 +47,15 @@ export interface CrawlResult {
   timestamp: Date;
 }
 
+@ApiTags('crawling')
 @Controller('crawling')
 export class CrawlingController {
   constructor(private readonly crawlingService: CrawlingService) {}
 
   @Post('crawl')
+  @ApiOperation({ summary: 'Basic web page crawling' })
+  @ApiResponse({ status: 200, description: 'Successfully crawled the webpage' })
+  @ApiBody({ type: CrawlRequest })
   async crawlUrl(@Body() crawlRequest: CrawlRequest): Promise<CrawlResult> {
     return this.crawlingService.crawlUrl(
       crawlRequest.url,
@@ -60,6 +65,9 @@ export class CrawlingController {
   }
 
   @Post('advanced-crawl')
+  @ApiOperation({ summary: 'Advanced website crawling with embeddings' })
+  @ApiResponse({ status: 200, description: 'Successfully crawled website and generated embeddings' })
+  @ApiBody({ type: AdvancedCrawlRequest })
   async crawlWebsiteWithEmbedding(@Body() request: AdvancedCrawlRequest): Promise<AdvancedCrawlResult> {
     return this.crawlingService.crawlWebsiteWithEmbedding(
       request.url,
