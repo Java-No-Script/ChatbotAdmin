@@ -298,32 +298,34 @@ export class SlackService {
         if (result.messages) {
           // 첫 번째 메시지는 원본 메시지이므로 제외하고 답글들만 처리
           const replies = result.messages.slice(1).filter(msg => {
-            // 봇 메시지만 필터링
-            return msg.user === this.botUserId || 
-                   msg.bot_id || 
-                   msg.subtype === 'bot_message';
+            // 봇 메시지만 필터링 (타입 안전성을 위해 any로 캐스팅)
+            const message = msg as any;
+            return message.user === this.botUserId || 
+                   message.bot_id || 
+                   message.subtype === 'bot_message';
           });
 
           for (const reply of replies) {
-            const permalink = await this.getMessagePermalink(channelId, reply.ts!);
+            const message = reply as any; // 타입 안전성을 위해 any로 캐스팅
+            const permalink = await this.getMessagePermalink(channelId, message.ts!);
             
             threadMessages.push({
-              ts: reply.ts!,
-              text: reply.text || '',
+              ts: message.ts!,
+              text: message.text || '',
               channel: channelId,
-              user: reply.user || reply.bot_id || 'bot',
-              type: reply.type!,
-              subtype: reply.subtype,
-              bot_id: reply.bot_id,
-              app_id: reply.app_id,
-              username: reply.username,
-              attachments: reply.attachments,
-              blocks: reply.blocks,
-              reactions: reply.reactions,
-              thread_ts: reply.thread_ts,
-              reply_count: reply.reply_count,
+              user: message.user || message.bot_id || 'bot',
+              type: message.type!,
+              subtype: message.subtype,
+              bot_id: message.bot_id,
+              app_id: message.app_id,
+              username: message.username,
+              attachments: message.attachments,
+              blocks: message.blocks,
+              reactions: message.reactions,
+              thread_ts: message.thread_ts,
+              reply_count: message.reply_count,
               permalink,
-              created_at: new Date(parseFloat(reply.ts!) * 1000)
+              created_at: new Date(parseFloat(message.ts!) * 1000)
             });
 
             fetchedCount++;
