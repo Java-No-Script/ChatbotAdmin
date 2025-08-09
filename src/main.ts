@@ -14,7 +14,7 @@ async function bootstrap() {
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-      origin: 'http://localhost:3000',
+      origin: ['http://localhost:3000','https://admin-for-slackbot.vercel.app']
   });
   
   // Swagger configuration
