@@ -213,4 +213,26 @@ export class DatabaseService {
       await client.end();
     }
   }
+
+  async getCrawledDocsCount(): Promise<number> {
+      const client = await this.getClient();
+
+      try {
+          const result = await client.query(`
+          SELECT COUNT(*) as count
+          FROM threads
+          WHERE thread_ts IS NULL
+          AND channel_id IS NULL
+          AND root_message IS NOT NULL
+          GROUP BY root_message, thread_url
+          `);
+
+          return result.rowCount;
+      } catch (error) {
+          this.logger.error('크롤링된 문서 개수 조회 오류:', error);
+          throw error;
+      } finally {
+          await client.end();
+      }
+  }
 }

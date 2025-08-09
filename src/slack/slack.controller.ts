@@ -2,6 +2,7 @@ import { Controller, Get, Put, Delete, Post, Body, Param, Query } from '@nestjs/
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiQuery, ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, Min, Max, IsArray } from 'class-validator';
 import { SlackService, SlackMessage, SlackMessageStats } from './slack.service';
+import {DatabaseService} from "../services/database.service";
 
 export class GetMessagesRequest {
   @ApiProperty({ 
@@ -160,7 +161,7 @@ export class ChannelListResponse {
 @ApiTags('slack')
 @Controller('slack')
 export class SlackController {
-  constructor(private readonly slackService: SlackService) {}
+  constructor(private readonly slackService: SlackService, private readonly databaseService: DatabaseService) {}
 
   @Get('messages')
   @ApiOperation({ summary: 'Get all bot messages from Slack channels' })
@@ -272,7 +273,7 @@ export class SlackController {
   async getBotStats(
     @Query('channelId') channelId?: string,
     @Query('days') days?: string
-  ): Promise<{ stats: SlackMessageStats; success: boolean; timestamp: Date }> {
+  ): Promise<{ stats: SlackMessageStats; success: boolean; timestamp: Date, categoryCounts: number, docCount: number }> {
     const daysBack = days ? parseInt(days, 10) : 7;
     const oldest = Math.floor((Date.now() - (daysBack * 24 * 60 * 60 * 1000)) / 1000).toString();
 
@@ -282,8 +283,12 @@ export class SlackController {
       oldest
     );
 
+    const docCount = await this.databaseService.getCrawledDocsCount();
+
     return {
+        docCount,
       stats: result.stats,
+        categoryCounts: 6,
       success: true,
       timestamp: new Date()
     };
