@@ -1,30 +1,75 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import { WebClient } from '@slack/web-api';
 import { slackConfig } from '../config/slack.config';
 
-export interface SlackMessage {
+export class SlackMessage {
+  @ApiProperty({ description: 'Message timestamp', example: '1609459200.000400' })
   ts: string;
+
+  @ApiProperty({ description: 'Message text content', example: 'Hello from the bot!' })
   text: string;
+
+  @ApiProperty({ description: 'Channel ID', example: 'C1234567890' })
   channel: string;
+
+  @ApiProperty({ description: 'User ID', example: 'U1234567890' })
   user: string;
+
+  @ApiProperty({ description: 'Message type', example: 'message' })
   type: string;
+
+  @ApiProperty({ description: 'Message subtype', example: 'bot_message', required: false })
   subtype?: string;
+
+  @ApiProperty({ description: 'Bot ID', example: 'B1234567890', required: false })
   bot_id?: string;
+
+  @ApiProperty({ description: 'App ID', example: 'A1234567890', required: false })
   app_id?: string;
+
+  @ApiProperty({ description: 'Bot username', example: 'mybot', required: false })
   username?: string;
+
+  @ApiProperty({ description: 'Message attachments', required: false })
   attachments?: any[];
+
+  @ApiProperty({ description: 'Message blocks', required: false })
   blocks?: any[];
+
+  @ApiProperty({ description: 'Message reactions', required: false })
   reactions?: any[];
+
+  @ApiProperty({ description: 'Thread timestamp if reply', example: '1609459200.000400', required: false })
   thread_ts?: string;
+
+  @ApiProperty({ description: 'Number of replies', example: 3, required: false })
   reply_count?: number;
+
+  @ApiProperty({ description: 'Permalink to message', example: 'https://workspace.slack.com/archives/C1234567890/p1609459200000400', required: false })
   permalink?: string;
+
+  @ApiProperty({ description: 'Message creation date', example: '2024-01-01T00:00:00.000Z' })
   created_at: Date;
 }
 
-export interface SlackMessageStats {
+export class SlackMessageStats {
+  @ApiProperty({ description: 'Total number of messages', example: 150 })
   totalMessages: number;
+
+  @ApiProperty({ 
+    description: 'Message count per channel',
+    example: { 'C1234567890': { channelName: 'general', count: 50 } }
+  })
   channelStats: { [channelId: string]: { channelName: string; count: number } };
+
+  @ApiProperty({ 
+    description: 'Date range of messages',
+    example: { from: '2024-01-01T00:00:00.000Z', to: '2024-01-31T23:59:59.999Z' }
+  })
   dateRange: { from: Date; to: Date };
+
+  @ApiProperty({ description: 'Bot user ID', example: 'U1234567890' })
   botUserId: string;
 }
 
@@ -36,8 +81,6 @@ export class SlackService {
 
   constructor() {
     const token = process.env.SLACK_BOT_TOKEN || '';
-    console.log('SLACK_BOT_TOKEN 환경변수:', process.env.SLACK_BOT_TOKEN);
-    console.log('사용할 토큰:', token);
     this.client = new WebClient(token);
     this.initializeBotInfo();
   }
@@ -98,6 +141,8 @@ export class SlackService {
         from: timestamps[0] || new Date(),
         to: timestamps[timestamps.length - 1] || new Date()
       };
+
+      console.log("allMessages:", allMessages);
 
       const stats: SlackMessageStats = {
         totalMessages: allMessages.length,

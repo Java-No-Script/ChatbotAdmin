@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ApiProperty } from '@nestjs/swagger';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import * as puppeteer from 'puppeteer-core';
@@ -7,10 +8,32 @@ import { CrawlResult } from './crawling.controller';
 import { BedrockService } from '../services/bedrock.service';
 import { DatabaseService, CrawlRecord } from '../services/database.service';
 
-export interface AdvancedCrawlResult extends CrawlResult {
+export class AdvancedCrawlResult {
+  @ApiProperty({ description: 'Crawled URL', example: 'https://example.com' })
+  url: string;
+
+  @ApiProperty({ description: 'Page title', example: 'Example Page' })
+  title: string;
+
+  @ApiProperty({ description: 'Extracted content', example: 'This is the page content...' })
+  content: string;
+
+  @ApiProperty({ description: 'Found links', example: ['https://example.com/page1', 'https://example.com/page2'] })
+  links: string[];
+
+  @ApiProperty({ description: 'Crawl timestamp', example: '2024-01-01T00:00:00.000Z' })
+  timestamp: Date;
+
+  @ApiProperty({ description: 'Text chunks created', example: ['chunk1', 'chunk2'], required: false })
   chunks?: string[];
+
+  @ApiProperty({ description: 'Embedding vector dimensions', example: 1024, required: false })
   embeddingDimensions?: number;
+
+  @ApiProperty({ description: 'Total number of chunks created', example: 25, required: false })
   totalChunks?: number;
+
+  @ApiProperty({ description: 'Total execution time in milliseconds', example: 15000, required: false })
   executionTime?: number;
 }
 

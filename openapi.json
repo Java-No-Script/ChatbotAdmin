@@ -29,7 +29,14 @@
         },
         "responses": {
           "200": {
-            "description": "Successfully crawled the webpage"
+            "description": "Successfully crawled the webpage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlResult"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -54,7 +61,14 @@
         },
         "responses": {
           "200": {
-            "description": "Successfully crawled website and generated embeddings"
+            "description": "Successfully crawled website and generated embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvancedCrawlResult"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -190,7 +204,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved bot messages"
+            "description": "Successfully retrieved bot messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotMessagesResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -213,7 +234,14 @@
         },
         "responses": {
           "200": {
-            "description": "Successfully updated message"
+            "description": "Successfully updated message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageActionResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -414,27 +442,334 @@
     "schemas": {
       "CrawlRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL to crawl",
+            "example": "https://example.com"
+          },
+          "depth": {
+            "type": "number",
+            "description": "Crawling depth",
+            "example": 1,
+            "minimum": 1
+          },
+          "selector": {
+            "type": "string",
+            "description": "CSS selector to extract specific content",
+            "example": ".content"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "CrawlResult": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Crawled URL",
+            "example": "https://example.com"
+          },
+          "title": {
+            "type": "string",
+            "description": "Page title",
+            "example": "Example Page"
+          },
+          "content": {
+            "type": "string",
+            "description": "Extracted content",
+            "example": "This is the page content..."
+          },
+          "links": {
+            "description": "Found links",
+            "example": [
+              "https://example.com/page1",
+              "https://example.com/page2"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Crawl timestamp",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "content",
+          "links",
+          "timestamp"
+        ]
       },
       "AdvancedCrawlRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Website URL to crawl with embeddings",
+            "example": "https://example.com"
+          },
+          "maxPages": {
+            "type": "number",
+            "description": "Maximum number of pages to crawl",
+            "example": 10,
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "AdvancedCrawlResult": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Crawled URL",
+            "example": "https://example.com"
+          },
+          "title": {
+            "type": "string",
+            "description": "Page title",
+            "example": "Example Page"
+          },
+          "content": {
+            "type": "string",
+            "description": "Extracted content",
+            "example": "This is the page content..."
+          },
+          "links": {
+            "description": "Found links",
+            "example": [
+              "https://example.com/page1",
+              "https://example.com/page2"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Crawl timestamp",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "chunks": {
+            "description": "Text chunks created",
+            "example": [
+              "chunk1",
+              "chunk2"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "embeddingDimensions": {
+            "type": "number",
+            "description": "Embedding vector dimensions",
+            "example": 1024
+          },
+          "totalChunks": {
+            "type": "number",
+            "description": "Total number of chunks created",
+            "example": 25
+          },
+          "executionTime": {
+            "type": "number",
+            "description": "Total execution time in milliseconds",
+            "example": 15000
+          }
+        },
+        "required": [
+          "url",
+          "title",
+          "content",
+          "links",
+          "timestamp"
+        ]
       },
       "SearchRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for similarity search",
+            "example": "machine learning"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of results to return",
+            "example": 10,
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "BotMessagesResponse": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "description": "Array of bot messages",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "stats": {
+            "type": "object",
+            "description": "Message statistics"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status",
+            "example": true
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Response timestamp",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "messages",
+          "stats",
+          "success",
+          "timestamp"
+        ]
       },
       "UpdateMessageRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Slack channel ID",
+            "example": "C1234567890"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Message timestamp",
+            "example": "1609459200.000400"
+          },
+          "text": {
+            "type": "string",
+            "description": "New message text",
+            "example": "Updated message content"
+          },
+          "blocks": {
+            "description": "Slack blocks for rich formatting",
+            "example": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Hello *World*"
+                }
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "channelId",
+          "timestamp",
+          "text"
+        ]
+      },
+      "MessageActionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Operation success status",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message",
+            "example": "Message updated successfully"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Response timestamp",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "success",
+          "timestamp"
+        ]
       },
       "DeleteMessageRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Slack channel ID",
+            "example": "C1234567890"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Message timestamp",
+            "example": "1609459200.000400"
+          }
+        },
+        "required": [
+          "channelId",
+          "timestamp"
+        ]
       },
       "SendMessageRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "Slack channel ID",
+            "example": "C1234567890"
+          },
+          "text": {
+            "type": "string",
+            "description": "Message text",
+            "example": "Hello from the bot!"
+          },
+          "blocks": {
+            "description": "Slack blocks for rich formatting",
+            "example": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Hello *World*"
+                }
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "channelId",
+          "text"
+        ]
       }
     }
   }
