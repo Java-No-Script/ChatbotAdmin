@@ -14,12 +14,12 @@
     },
     "/openapi.json": {
       "get": {
-        "operationId": "AppController_downloadOpenApiJson",
-        "summary": "Download OpenAPI JSON specification",
+        "operationId": "AppController_getOpenApiJson",
+        "summary": "Get OpenAPI JSON specification",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "OpenAPI JSON file downloaded successfully",
+            "description": "OpenAPI JSON specification returned as JSON response",
             "content": {
               "application/json": {
                 "schema": {
@@ -27,21 +27,6 @@
                 }
               }
             }
-          }
-        },
-        "tags": [
-          "documentation"
-        ]
-      }
-    },
-    "/api-docs": {
-      "get": {
-        "operationId": "AppController_getOpenApiJson",
-        "summary": "Get OpenAPI JSON specification (inline)",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "OpenAPI JSON specification returned inline"
           }
         },
         "tags": [
