@@ -271,7 +271,7 @@
     "/slack/messages": {
       "get": {
         "operationId": "SlackController_getBotMessages",
-        "summary": "Get all bot messages from Slack channels",
+        "summary": "Get all bot messages from Slack channels with pagination",
         "parameters": [
           {
             "name": "channelId",
@@ -281,11 +281,38 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "includeThreads",
+            "required": false,
+            "in": "query",
+            "description": "Include thread messages (default: true)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Messages per page (default: 20, max: 100)",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved all bot messages"
+            "description": "Successfully retrieved bot messages"
           }
         },
         "tags": [

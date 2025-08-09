@@ -101,9 +101,11 @@ export class SlackService {
 
   async getBotMessages(
     channelId?: string,
-    limit: number = 1000, // 기본값을 1000으로 증가
+    limit: number = 20, // 기본값을 20으로 변경
     oldest?: string,
-    latest?: string
+    latest?: string,
+    includeThreads: boolean = true,
+    page: number = 1
   ): Promise<{ messages: SlackMessage[]; stats: SlackMessageStats }> {
     try {
       if (!this.botUserId) {
@@ -115,23 +117,32 @@ export class SlackService {
 
       if (channelId) {
         // 특정 채널의 메시지 조회
-        const messages = await this.getChannelBotMessages(channelId, limit, oldest, latest);
+        const messages = await this.getChannelBotMessages(channelId, limit, oldest, latest, includeThreads, page);
         allMessages.push(...messages);
 
         const channelInfo = await this.client.conversations.info({ channel: channelId });
         const channelName = channelInfo.channel?.name || channelId;
         channelStats[channelId] = { channelName, count: messages.length };
       } else {
-        // 모든 채널의 메시지 조회
+        // 모든 채널의 메시지 조회 (페이지네이션은 특정 채널에서만 적용)
         const channels = await this.getBotChannels();
         
         for (const channel of channels) {
-          const messages = await this.getChannelBotMessages(channel.id, limit, oldest, latest);
+          const messages = await this.getChannelBotMessages(channel.id, limit, oldest, latest, includeThreads, 1);
           allMessages.push(...messages);
           
           if (messages.length > 0) {
             channelStats[channel.id] = { channelName: channel.name, count: messages.length };
           }
+        }
+        
+        // 모든 채널 조회 시 페이지네이션 적용
+        if (page > 1) {
+          const startIndex = (page - 1) * limit;
+          const endIndex = startIndex + limit;
+          allMessages.splice(0, allMessages.length, ...allMessages.slice(startIndex, endIndex));
+        } else {
+          allMessages.splice(limit);
         }
       }
 
@@ -181,23 +192,30 @@ export class SlackService {
     channelId: string,
     limit: number,
     oldest?: string,
-    latest?: string
+    latest?: string,
+    includeThreads: boolean = true,
+    page: number = 1
   ): Promise<SlackMessage[]> {
     try {
       const messages: SlackMessage[] = [];
       let cursor: string | undefined;
       let fetchedCount = 0;
+      let skipCount = (page - 1) * limit; // 스킵할 메시지 수
+      let skippedCount = 0;
 
       do {
+        // 페이지네이션을 위해 더 많은 메시지를 가져올 수 있도록 조정
+        const batchSize = Math.min(200, (limit * page) + 200 - fetchedCount);
         const result = await this.client.conversations.history({
           channel: channelId,
-          limit: Math.min(200, limit - fetchedCount),
+          limit: batchSize,
           cursor,
           oldest,
           latest
         });
 
         if (result.messages) {
+          // 먼저 봇 메시지 필터링
           const botMessages = result.messages.filter(msg => {
             // 시스템 메시지 제외 (bot_add, bot_remove, channel_join 등)
             const systemSubtypes = [
@@ -225,7 +243,20 @@ export class SlackService {
                    msg.subtype === 'bot_message';
           });
 
+          // 모든 메시지 중에서 스레드가 있는 것들도 확인 (유저 메시지 포함)
+          const allMessagesWithThreads = includeThreads ? 
+            result.messages.filter(msg => msg.reply_count && msg.reply_count > 0) : [];
+
+          // 봇 메시지 처리
           for (const msg of botMessages) {
+            // 스킵 로직
+            if (skippedCount < skipCount) {
+              skippedCount++;
+              continue;
+            }
+
+            if (fetchedCount >= limit) break;
+
             const permalink = await this.getMessagePermalink(channelId, msg.ts!);
             
             // 메인 메시지 추가
@@ -249,24 +280,52 @@ export class SlackService {
             });
 
             fetchedCount++;
-            if (fetchedCount >= limit) break;
 
-            // 스레드가 있는 메시지인 경우 스레드 답글들도 가져오기
-            if (msg.reply_count && msg.reply_count > 0) {
+            // 봇 메시지의 스레드 답글들도 가져오기
+            if (includeThreads && msg.reply_count && msg.reply_count > 0 && fetchedCount < limit) {
               try {
                 const threadMessages = await this.getThreadMessages(channelId, msg.ts!, limit - fetchedCount);
                 messages.push(...threadMessages);
                 fetchedCount += threadMessages.length;
-                if (fetchedCount >= limit) break;
               } catch (error) {
                 this.logger.warn(`스레드 메시지 조회 실패 (${channelId}/${msg.ts!}):`, error);
+              }
+            }
+          }
+
+          // 유저 메시지의 스레드에서 봇 댓글이 있는지 확인
+          if (includeThreads && fetchedCount < limit) {
+            const userMessagesWithThreads = allMessagesWithThreads.filter(msg => 
+              !botMessages.some(botMsg => botMsg.ts === msg.ts)
+            );
+
+            for (const msg of userMessagesWithThreads) {
+              if (fetchedCount >= limit) break;
+              
+              try {
+                const threadMessages = await this.getThreadMessages(channelId, msg.ts!, limit - fetchedCount);
+                if (threadMessages.length > 0) {
+                  // 스킵 로직 적용
+                  for (const threadMsg of threadMessages) {
+                    if (skippedCount < skipCount) {
+                      skippedCount++;
+                      continue;
+                    }
+                    if (fetchedCount >= limit) break;
+                    
+                    messages.push(threadMsg);
+                    fetchedCount++;
+                  }
+                }
+              } catch (error) {
+                this.logger.warn(`유저 메시지 스레드 조회 실패 (${channelId}/${msg.ts!}):`, error);
               }
             }
           }
         }
 
         cursor = result.response_metadata?.next_cursor;
-      } while (cursor && fetchedCount < limit);
+      } while (cursor && fetchedCount < limit && (skippedCount < skipCount + fetchedCount));
 
       return messages.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
 

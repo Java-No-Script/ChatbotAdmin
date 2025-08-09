@@ -164,17 +164,32 @@ export class SlackController {
   constructor(private readonly slackService: SlackService, private readonly databaseService: DatabaseService) {}
 
   @Get('messages')
-  @ApiOperation({ summary: 'Get all bot messages from Slack channels' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved all bot messages' })
+  @ApiOperation({ summary: 'Get all bot messages from Slack channels with pagination' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved bot messages' })
   @ApiQuery({ name: 'channelId', required: false, description: 'Slack channel ID' })
+  @ApiQuery({ name: 'includeThreads', required: false, description: 'Include thread messages (default: true)' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Messages per page (default: 20, max: 100)' })
   async getBotMessages(
-    @Query('channelId') channelId?: string
+    @Query('channelId') channelId?: string,
+    @Query('includeThreads') includeThreads?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
   ) {
-    const result = await this.slackService.getBotMessages(channelId);
+    const includeThreadsFlag = includeThreads !== 'false';
+    const pageNum = Math.max(1, parseInt(page || '1', 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));
+    
+    const result = await this.slackService.getBotMessages(channelId, limitNum, undefined, undefined, includeThreadsFlag, pageNum);
 
     return {
       messages: result.messages,
-      total: result.messages.length,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: result.messages.length,
+        hasMore: result.messages.length === limitNum
+      },
       totalMessages: result.stats.totalMessages,
       channelStats: result.stats.channelStats,
       dateRange: result.stats.dateRange
@@ -280,7 +295,10 @@ export class SlackController {
     const result = await this.slackService.getBotMessages(
       channelId,
       1000,
-      oldest
+      oldest,
+      undefined,
+      true,
+      1
     );
 
     const docCount = await this.databaseService.getCrawledDocsCount();
