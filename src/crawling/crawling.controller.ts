@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, Min, Max } from 'class-validator';
 import { CrawlingService, AdvancedCrawlResult } from './crawling.service';
+import { DatabaseService, ThreadGroup } from '../services/database.service';
 
 export class CrawlRequest {
   @ApiProperty({ 
@@ -96,7 +97,10 @@ export class CrawlResult {
 @ApiTags('crawling')
 @Controller('crawling')
 export class CrawlingController {
-  constructor(private readonly crawlingService: CrawlingService) {}
+  constructor(
+    private readonly crawlingService: CrawlingService,
+    private readonly databaseService: DatabaseService
+  ) {}
 
   @Post('crawl')
   @ApiOperation({ summary: 'Basic web page crawling' })
@@ -153,5 +157,37 @@ export class CrawlingController {
   @Get('results/:jobId')
   async getCrawlResults(@Param('jobId') jobId: string): Promise<CrawlResult[]> {
     return this.crawlingService.getCrawlResults(jobId);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get crawled thread groups' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Successfully retrieved crawled thread groups',
+    schema: {
+      type: 'object',
+      properties: {
+        history: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              content: { type: 'string', description: 'Root message content' },
+              link: { type: 'string', description: 'link URL' },
+              createdAt: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
+              count: { type: 'number', description: 'Number of messages in thread group' }
+            }
+          }
+        },
+        total: { type: 'number', description: 'Total number of thread groups' }
+      }
+    }
+  })
+  async getCrawledThreads(): Promise<{ history: ThreadGroup[]; total: number }> {
+    const history = await this.databaseService.getCrawledThreadGroups();
+    return {
+        history,
+        total: history.length
+    };
   }
 }

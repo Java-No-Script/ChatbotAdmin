@@ -215,6 +215,59 @@
         ]
       }
     },
+    "/crawling/history": {
+      "get": {
+        "operationId": "CrawlingController_getCrawledThreads",
+        "summary": "Get crawled thread groups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved crawled thread groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "history": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "content": {
+                            "type": "string",
+                            "description": "Root message content"
+                          },
+                          "link": {
+                            "type": "string",
+                            "description": "link URL"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Creation timestamp"
+                          },
+                          "count": {
+                            "type": "number",
+                            "description": "Number of messages in thread group"
+                          }
+                        }
+                      }
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "Total number of thread groups"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
     "/slack/messages": {
       "get": {
         "operationId": "SlackController_getBotMessages",

@@ -13,6 +13,13 @@ export interface CrawlRecord {
   created_at?: Date;
 }
 
+export interface ThreadGroup {
+  content: string;
+  link: string;
+  createdAt: Date;
+  count: number;
+}
+
 @Injectable()
 export class DatabaseService {
   private readonly logger = new Logger(DatabaseService.name);
@@ -169,6 +176,38 @@ export class DatabaseService {
       }));
     } catch (error) {
       this.logger.error('유사도 검색 오류:', error);
+      throw error;
+    } finally {
+      await client.end();
+    }
+  }
+
+  async getCrawledThreadGroups(): Promise<ThreadGroup[]> {
+    const client = await this.getClient();
+    
+    try {
+      const result = await client.query(`
+        SELECT 
+          root_message,
+          thread_url,
+          MIN(created_at) as created_at,
+          COUNT(*) as count
+        FROM threads 
+        WHERE thread_ts IS NULL 
+          AND channel_id IS NULL
+          AND root_message IS NOT NULL
+        GROUP BY root_message, thread_url
+        ORDER BY MIN(created_at) DESC
+      `);
+
+      return result.rows.map(row => ({
+        content: row.root_message,
+        link: row.thread_url,
+        createdAt: row.created_at,
+        count: parseInt(row.count)
+      }));
+    } catch (error) {
+      this.logger.error('크롤링된 스레드 그룹 조회 오류:', error);
       throw error;
     } finally {
       await client.end();
