@@ -44,17 +44,50 @@
         ]
       }
     },
-    "/crawling/advanced-crawl": {
+    "/crawling/process": {
       "post": {
-        "operationId": "CrawlingController_crawlWebsiteWithEmbedding",
-        "summary": "Advanced website crawling with embeddings",
+        "operationId": "CrawlingController_processContent",
+        "summary": "Universal content processing",
+        "description": "Process any type of content: websites, PDFs, Markdown files, or GitHub repositories",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AdvancedCrawlRequest"
+                "$ref": "#/components/schemas/UniversalCrawlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully processed content and generated embeddings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvancedCrawlResult"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "crawling"
+        ]
+      }
+    },
+    "/crawling/advanced-crawl": {
+      "post": {
+        "operationId": "CrawlingController_crawlWebsiteWithEmbedding",
+        "summary": "Advanced website crawling with embeddings (deprecated - use /process instead)",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversalCrawlRequest"
               }
             }
           }
@@ -508,20 +541,20 @@
           "timestamp"
         ]
       },
-      "AdvancedCrawlRequest": {
+      "UniversalCrawlRequest": {
         "type": "object",
         "properties": {
           "url": {
             "type": "string",
-            "description": "Website URL to crawl with embeddings",
-            "example": "https://example.com"
+            "description": "URL to process (website, PDF, Markdown, or GitHub repository)",
+            "example": "https://example.com or https://example.com/document.pdf or https://github.com/user/repo"
           },
           "maxPages": {
             "type": "number",
-            "description": "Maximum number of pages to crawl",
+            "description": "Maximum number of pages to crawl (for websites only)",
             "example": 10,
             "minimum": 1,
-            "maximum": 50
+            "maximum": 150
           }
         },
         "required": [

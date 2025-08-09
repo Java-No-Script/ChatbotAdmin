@@ -32,25 +32,25 @@ export class CrawlRequest {
   selector?: string;
 }
 
-export class AdvancedCrawlRequest {
+export class UniversalCrawlRequest {
   @ApiProperty({ 
-    description: 'Website URL to crawl with embeddings', 
-    example: 'https://example.com' 
+    description: 'URL to process (website, PDF, Markdown, or GitHub repository)', 
+    example: 'https://example.com or https://example.com/document.pdf or https://github.com/user/repo' 
   })
   @IsString()
   url: string;
 
   @ApiProperty({ 
-    description: 'Maximum number of pages to crawl', 
+    description: 'Maximum number of pages to crawl (for websites only)', 
     example: 10, 
     required: false,
     minimum: 1,
-    maximum: 50 
+    maximum: 150
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(50)
+  @Max(150)
   maxPages?: number;
 }
 
@@ -72,7 +72,7 @@ export class SearchRequest {
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(50)
+  @Max(150)
   limit?: number;
 }
 
@@ -110,11 +110,25 @@ export class CrawlingController {
     );
   }
 
+  @Post('process')
+  @ApiOperation({ 
+    summary: 'Universal content processing', 
+    description: 'Process any type of content: websites, PDFs, Markdown files, or GitHub repositories' 
+  })
+  @ApiResponse({ status: 200, description: 'Successfully processed content and generated embeddings', type: AdvancedCrawlResult })
+  @ApiBody({ type: UniversalCrawlRequest })
+  async processContent(@Body() request: UniversalCrawlRequest): Promise<AdvancedCrawlResult> {
+    return this.crawlingService.crawlContent(
+      request.url,
+      request.maxPages || 10
+    );
+  }
+
   @Post('advanced-crawl')
-  @ApiOperation({ summary: 'Advanced website crawling with embeddings' })
+  @ApiOperation({ summary: 'Advanced website crawling with embeddings (deprecated - use /process instead)' })
   @ApiResponse({ status: 200, description: 'Successfully crawled website and generated embeddings', type: AdvancedCrawlResult })
-  @ApiBody({ type: AdvancedCrawlRequest })
-  async crawlWebsiteWithEmbedding(@Body() request: AdvancedCrawlRequest): Promise<AdvancedCrawlResult> {
+  @ApiBody({ type: UniversalCrawlRequest })
+  async crawlWebsiteWithEmbedding(@Body() request: UniversalCrawlRequest): Promise<AdvancedCrawlResult> {
     return this.crawlingService.crawlWebsiteWithEmbedding(
       request.url,
       request.maxPages || 10

@@ -4,6 +4,9 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import * as puppeteer from 'puppeteer-core';
 import * as chromium from 'chromium';
+import * as pdfParse from 'pdf-parse';
+import { Octokit } from '@octokit/rest';
+import { marked } from 'marked';
 import { CrawlResult } from './crawling.controller';
 import { BedrockService } from '../services/bedrock.service';
 import { DatabaseService, CrawlRecord } from '../services/database.service';
@@ -52,6 +55,337 @@ export class CrawlingService {
     private readonly bedrockService: BedrockService,
     private readonly databaseService: DatabaseService
   ) {}
+
+  // URL 타입 감지
+  private detectUrlType(url: string): 'pdf' | 'github' | 'markdown' | 'website' {
+    if (url.toLowerCase().endsWith('.pdf')) {
+      return 'pdf';
+    }
+    if (url.includes('github.com')) {
+      return 'github';
+    }
+    if (url.toLowerCase().endsWith('.md') || url.toLowerCase().endsWith('.markdown')) {
+      return 'markdown';
+    }
+    return 'website';
+  }
+
+  // 통합 크롤링 메서드
+  async crawlContent(url: string, maxPages: number = 10): Promise<AdvancedCrawlResult> {
+    const urlType = this.detectUrlType(url);
+    
+    this.logger.log(`URL 타입 감지: ${urlType} - ${url}`);
+    
+    switch (urlType) {
+      case 'pdf':
+        return this.processPdf(url);
+      case 'github':
+        return this.processGitHubRepo(url);
+      case 'markdown':
+        return this.processMarkdown(url);
+      default:
+        return this.crawlWebsiteWithEmbedding(url, maxPages);
+    }
+  }
+
+  // PDF 처리
+  async processPdf(url: string): Promise<AdvancedCrawlResult> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger.log(`PDF 처리 시작: ${url}`);
+      
+      // PDF URL 접근 가능성 먼저 확인
+      const isAccessible = await this.isUrlAccessible(url);
+      if (!isAccessible) {
+        throw new Error(`PDF URL에 접근할 수 없습니다: ${url}`);
+      }
+      
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 60000, // 60초로 증가
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/pdf,*/*'
+        },
+        maxContentLength: 50 * 1024 * 1024, // 50MB 제한
+        maxBodyLength: 50 * 1024 * 1024
+      });
+
+      if (response.headers['content-type'] && !response.headers['content-type'].includes('pdf')) {
+        throw new Error('응답이 PDF 파일이 아닙니다');
+      }
+
+      const pdfBuffer = Buffer.from(response.data);
+      
+      if (pdfBuffer.length === 0) {
+        throw new Error('PDF 파일이 비어있습니다');
+      }
+      
+      this.logger.log(`PDF 다운로드 완료: ${pdfBuffer.length} bytes`);
+      
+      const pdfData = await pdfParse(pdfBuffer);
+      
+      if (!pdfData.text || pdfData.text.trim().length === 0) {
+        throw new Error('PDF에서 텍스트를 추출할 수 없습니다');
+      }
+      
+      const content = pdfData.text.trim();
+      const title = this.extractTitleFromPdf(content) || 'PDF Document';
+      
+      this.logger.log(`PDF 텍스트 추출 완료: ${content.length}자`);
+      
+      // 청크로 분할하고 임베딩 생성
+      const chunks = this.splitTextIntoChunks(content);
+      const records: CrawlRecord[] = [];
+      
+      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+        const embedding = await this.bedrockService.createEmbedding(chunk);
+        
+        records.push({
+          url,
+          title,
+          content: chunk,
+          embedding,
+          chunk_index: chunkIndex,
+          page_index: 0
+        });
+      }
+      
+      await this.databaseService.saveBatchRecords(records);
+      
+      const endTime = Date.now();
+      
+      return {
+        url,
+        title,
+        content: `PDF 문서에서 ${chunks.length}개 청크 생성 (${content.length}자 추출)`,
+        links: [url],
+        timestamp: new Date(),
+        chunks: chunks.slice(0, 3), // 처음 3개 청크만 반환
+        embeddingDimensions: 1024,
+        totalChunks: chunks.length,
+        executionTime: endTime - startTime
+      };
+      
+    } catch (error) {
+      this.logger.error(`PDF 처리 오류: ${error.message}`);
+      throw new Error(`PDF 처리 실패: ${error.message}`);
+    }
+  }
+
+  // Markdown 파일 처리
+  async processMarkdown(url: string): Promise<AdvancedCrawlResult> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger.log(`Markdown 파일 처리 시작: ${url}`);
+      
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+
+      const markdownContent = response.data;
+      const htmlContent = await marked(markdownContent);
+      const $ = cheerio.load(htmlContent);
+      const textContent = $.text().trim();
+      
+      const title = this.extractTitleFromMarkdown(markdownContent) || 'Markdown Document';
+      
+      // 청크로 분할하고 임베딩 생성
+      const chunks = this.splitTextIntoChunks(textContent);
+      const records: CrawlRecord[] = [];
+      
+      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+        const embedding = await this.bedrockService.createEmbedding(chunk);
+        
+        records.push({
+          url,
+          title,
+          content: chunk,
+          embedding,
+          chunk_index: chunkIndex,
+          page_index: 0
+        });
+      }
+      
+      await this.databaseService.saveBatchRecords(records);
+      
+      const endTime = Date.now();
+      
+      return {
+        url,
+        title,
+        content: `Markdown 문서에서 ${chunks.length}개 청크 생성`,
+        links: [url],
+        timestamp: new Date(),
+        chunks,
+        embeddingDimensions: 1024,
+        totalChunks: chunks.length,
+        executionTime: endTime - startTime
+      };
+      
+    } catch (error) {
+      this.logger.error(`Markdown 처리 오류: ${error.message}`);
+      throw new Error(`Markdown 처리 실패: ${url}`);
+    }
+  }
+
+  // GitHub 저장소 처리
+  async processGitHubRepo(url: string): Promise<AdvancedCrawlResult> {
+    const startTime = Date.now();
+    
+    try {
+      this.logger.log(`GitHub 저장소 처리 시작: ${url}`);
+      
+      const { owner, repo } = this.parseGitHubUrl(url);
+      const octokit = new Octokit();
+      
+      // 저장소 정보 가져오기
+      const repoInfo = await octokit.rest.repos.get({ owner, repo });
+      const title = repoInfo.data.full_name;
+      const description = repoInfo.data.description || '';
+      
+      // README 파일 가져오기
+      let readmeContent = '';
+      try {
+        const readme = await octokit.rest.repos.getReadme({ owner, repo });
+        const readmeBuffer = Buffer.from(readme.data.content, 'base64');
+        readmeContent = readmeBuffer.toString('utf-8');
+      } catch (error) {
+        this.logger.warn(`README 파일을 찾을 수 없습니다: ${owner}/${repo}`);
+      }
+      
+      // 주요 파일들 가져오기 (최대 20개)
+      const tree = await octokit.rest.git.getTree({
+        owner,
+        repo,
+        tree_sha: repoInfo.data.default_branch,
+        recursive: 'true'
+      });
+      
+      const importantFiles = tree.data.tree
+        .filter(item => 
+          item.type === 'blob' && 
+          (item.path?.endsWith('.md') || 
+           item.path?.endsWith('.py') || 
+           item.path?.endsWith('.js') || 
+           item.path?.endsWith('.ts') || 
+           item.path?.endsWith('.java') || 
+           item.path?.endsWith('.cpp') || 
+           item.path?.endsWith('.c') ||
+           item.path?.endsWith('.go') ||
+           item.path?.endsWith('.rs') ||
+           item.path?.includes('README') ||
+           item.path?.includes('CHANGELOG') ||
+           item.path?.includes('LICENSE'))
+        )
+        .slice(0, 20);
+      
+      const allContent: string[] = [];
+      
+      // README 내용 추가
+      if (readmeContent) {
+        const htmlContent = await marked(readmeContent);
+        const $ = cheerio.load(htmlContent);
+        allContent.push(`README.md:\n${$.text().trim()}`);
+      }
+      
+      // 저장소 설명 추가
+      if (description) {
+        allContent.push(`Repository Description:\n${description}`);
+      }
+      
+      // 각 파일 내용 가져오기
+      for (const file of importantFiles) {
+        try {
+          if (file.sha && file.path) {
+            const fileContent = await octokit.rest.git.getBlob({
+              owner,
+              repo,
+              file_sha: file.sha
+            });
+            
+            const content = Buffer.from(fileContent.data.content, 'base64').toString('utf-8');
+            
+            // 파일이 너무 크면 처음 2000자만 가져오기
+            const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + '...' : content;
+            allContent.push(`${file.path}:\n${truncatedContent}`);
+          }
+        } catch (error) {
+          this.logger.warn(`파일 내용을 가져올 수 없습니다: ${file.path}`);
+        }
+      }
+      
+      // 모든 내용을 하나의 텍스트로 결합
+      const combinedContent = allContent.join('\n\n---\n\n');
+      
+      // 청크로 분할하고 임베딩 생성
+      const chunks = this.splitTextIntoChunks(combinedContent, 1500); // GitHub는 더 큰 청크 사용
+      const records: CrawlRecord[] = [];
+      
+      for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+        const chunk = chunks[chunkIndex];
+        const embedding = await this.bedrockService.createEmbedding(chunk);
+        
+        records.push({
+          url,
+          title,
+          content: chunk,
+          embedding,
+          chunk_index: chunkIndex,
+          page_index: 0
+        });
+      }
+      
+      await this.databaseService.saveBatchRecords(records);
+      
+      const endTime = Date.now();
+      
+      return {
+        url,
+        title,
+        content: `GitHub 저장소에서 ${chunks.length}개 청크 생성 (${importantFiles.length}개 파일 처리)`,
+        links: [url],
+        timestamp: new Date(),
+        chunks,
+        embeddingDimensions: 1024,
+        totalChunks: chunks.length,
+        executionTime: endTime - startTime
+      };
+      
+    } catch (error) {
+      this.logger.error(`GitHub 저장소 처리 오류: ${error.message}`);
+      throw new Error(`GitHub 저장소 처리 실패: ${url}`);
+    }
+  }
+
+  // 유틸리티 메서드들
+  private parseGitHubUrl(url: string): { owner: string; repo: string } {
+    const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!match) {
+      throw new Error('유효하지 않은 GitHub URL입니다');
+    }
+    return { owner: match[1], repo: match[2] };
+  }
+
+  private extractTitleFromPdf(content: string): string | null {
+    const lines = content.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length > 0) {
+      return lines[0].substring(0, 100);
+    }
+    return null;
+  }
+
+  private extractTitleFromMarkdown(content: string): string | null {
+    const match = content.match(/^#\s+(.+)$/m);
+    return match ? match[1] : null;
+  }
 
   async crawlUrl(url: string, depth: number = 1, selector?: string): Promise<CrawlResult> {
     try {
