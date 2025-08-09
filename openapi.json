@@ -12,6 +12,43 @@
         }
       }
     },
+    "/openapi.json": {
+      "get": {
+        "operationId": "AppController_downloadOpenApiJson",
+        "summary": "Download OpenAPI JSON specification",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON file downloaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "documentation"
+        ]
+      }
+    },
+    "/api-docs": {
+      "get": {
+        "operationId": "AppController_getOpenApiJson",
+        "summary": "Get OpenAPI JSON specification (inline)",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON specification returned inline"
+          }
+        },
+        "tags": [
+          "documentation"
+        ]
+      }
+    },
     "/crawling/crawl": {
       "post": {
         "operationId": "CrawlingController_crawlUrl",
@@ -767,66 +804,6 @@
                         },
                         "other": {
                           "type": "number"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "tags": [
-          "Threads"
-        ]
-      }
-    },
-    "/api/threads/stats/trends": {
-      "get": {
-        "operationId": "ThreadController_getTrendStats",
-        "summary": "스레드 트렌드 분석",
-        "description": "시간대별, 카테고리별 트렌드 정보를 반환합니다.",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "트렌드 분석 결과",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "dailyStats": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "date": {
-                            "type": "string",
-                            "format": "date"
-                          },
-                          "count": {
-                            "type": "number"
-                          },
-                          "categories": {
-                            "type": "object",
-                            "additionalProperties": {
-                              "type": "number"
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "topTags": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "tag": {
-                            "type": "string"
-                          },
-                          "count": {
-                            "type": "number"
-                          }
                         }
                       }
                     }
