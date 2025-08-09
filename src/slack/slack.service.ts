@@ -228,6 +228,7 @@ export class SlackService {
           for (const msg of botMessages) {
             const permalink = await this.getMessagePermalink(channelId, msg.ts!);
             
+            // 메인 메시지 추가
             messages.push({
               ts: msg.ts!,
               text: msg.text || '',
@@ -249,6 +250,18 @@ export class SlackService {
 
             fetchedCount++;
             if (fetchedCount >= limit) break;
+
+            // 스레드가 있는 메시지인 경우 스레드 답글들도 가져오기
+            if (msg.reply_count && msg.reply_count > 0) {
+              try {
+                const threadMessages = await this.getThreadMessages(channelId, msg.ts!, limit - fetchedCount);
+                messages.push(...threadMessages);
+                fetchedCount += threadMessages.length;
+                if (fetchedCount >= limit) break;
+              } catch (error) {
+                this.logger.warn(`스레드 메시지 조회 실패 (${channelId}/${msg.ts!}):`, error);
+              }
+            }
           }
         }
 
@@ -259,6 +272,72 @@ export class SlackService {
 
     } catch (error) {
       this.logger.error(`채널 ${channelId} 메시지 조회 오류:`, error);
+      return [];
+    }
+  }
+
+  // 스레드 메시지들을 가져오는 새로운 메서드
+  private async getThreadMessages(
+    channelId: string, 
+    threadTs: string, 
+    maxMessages: number
+  ): Promise<SlackMessage[]> {
+    try {
+      const threadMessages: SlackMessage[] = [];
+      let cursor: string | undefined;
+      let fetchedCount = 0;
+
+      do {
+        const result = await this.client.conversations.replies({
+          channel: channelId,
+          ts: threadTs,
+          limit: Math.min(200, maxMessages - fetchedCount),
+          cursor
+        });
+
+        if (result.messages) {
+          // 첫 번째 메시지는 원본 메시지이므로 제외하고 답글들만 처리
+          const replies = result.messages.slice(1).filter(msg => {
+            // 봇 메시지만 필터링
+            return msg.user === this.botUserId || 
+                   msg.bot_id || 
+                   msg.subtype === 'bot_message';
+          });
+
+          for (const reply of replies) {
+            const permalink = await this.getMessagePermalink(channelId, reply.ts!);
+            
+            threadMessages.push({
+              ts: reply.ts!,
+              text: reply.text || '',
+              channel: channelId,
+              user: reply.user || reply.bot_id || 'bot',
+              type: reply.type!,
+              subtype: reply.subtype,
+              bot_id: reply.bot_id,
+              app_id: reply.app_id,
+              username: reply.username,
+              attachments: reply.attachments,
+              blocks: reply.blocks,
+              reactions: reply.reactions,
+              thread_ts: reply.thread_ts,
+              reply_count: reply.reply_count,
+              permalink,
+              created_at: new Date(parseFloat(reply.ts!) * 1000)
+            });
+
+            fetchedCount++;
+            if (fetchedCount >= maxMessages) break;
+          }
+        }
+
+        cursor = result.response_metadata?.next_cursor;
+      } while (cursor && fetchedCount < maxMessages);
+
+      return threadMessages;
+
+    } catch (error) {
+      this.logger.error(`스레드 메시지 조회 오류 (${channelId}/${threadTs}):`, error);
       return [];
     }
   }
