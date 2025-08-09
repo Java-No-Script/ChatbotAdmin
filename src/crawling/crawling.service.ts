@@ -196,9 +196,6 @@ export class CrawlingService {
     try {
       this.logger.log(`사이트 크롤링 시작: ${url}`);
 
-      // 테이블 초기화
-      await this.databaseService.initializeTable();
-
       browser = await puppeteer.launch({
         executablePath: chromium.path,
         headless: true,

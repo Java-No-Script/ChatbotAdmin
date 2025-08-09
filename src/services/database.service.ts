@@ -81,17 +81,44 @@ export class DatabaseService {
     
     try {
       for (const record of records) {
+        const embeddingString = record.embedding 
+          ? `[${record.embedding.join(',')}]` 
+          : null;
+
+        // 만약 thread_url에 유니크 제약조건을 추가했다면 아래 코드를 사용하세요:
+        // ALTER TABLE threads ADD CONSTRAINT threads_thread_url_unique UNIQUE (thread_url);
+        /*
         const result = await client.query(`
-          INSERT INTO tmp (url, title, content, embedding, chunk_index, page_index)
-          VALUES ($1, $2, $3, $4, $5, $6)
+          INSERT INTO threads (
+            thread_url, root_message, thread_summary, thread_embedding
+          )
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (thread_url)
+          DO UPDATE SET
+            root_message = EXCLUDED.root_message,
+            thread_summary = EXCLUDED.thread_summary,
+            thread_embedding = EXCLUDED.thread_embedding,
+            updated_at = CURRENT_TIMESTAMP
           RETURNING id
         `, [
           record.url,
-          record.title,
-          record.content,
-          JSON.stringify(record.embedding),
-          record.chunk_index,
-          record.page_index
+          record.title || null,  // title이 root_message
+          record.content || null, // content가 thread_summary
+          embeddingString        // thread_summary(content) 기반 임베딩
+        ]);
+        */
+        
+        const result = await client.query(`
+          INSERT INTO threads (
+            thread_url, root_message, thread_summary, thread_embedding
+          )
+          VALUES ($1, $2, $3, $4)
+          RETURNING id
+        `, [
+          record.url,
+          record.title || null,   // title이 root_message
+          record.content || null, // content가 thread_summary  
+          embeddingString         // thread_summary(content) 기반 임베딩
         ]);
         
         ids.push(result.rows[0].id);
