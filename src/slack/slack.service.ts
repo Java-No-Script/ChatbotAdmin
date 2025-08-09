@@ -198,11 +198,32 @@ export class SlackService {
         });
 
         if (result.messages) {
-          const botMessages = result.messages.filter(msg => 
-            msg.user === this.botUserId || 
-            msg.bot_id || 
-            msg.subtype === 'bot_message'
-          );
+          const botMessages = result.messages.filter(msg => {
+            // 시스템 메시지 제외 (bot_add, bot_remove, channel_join 등)
+            const systemSubtypes = [
+              'bot_add',
+              'bot_remove', 
+              'channel_join',
+              'channel_leave',
+              'channel_topic',
+              'channel_purpose',
+              'channel_name',
+              'channel_archive',
+              'channel_unarchive',
+              'pinned_item',
+              'unpinned_item'
+            ];
+            
+            // 시스템 메시지인 경우 제외
+            if (msg.subtype && systemSubtypes.includes(msg.subtype)) {
+              return false;
+            }
+            
+            // 실제 봇 메시지만 포함
+            return msg.user === this.botUserId || 
+                   msg.bot_id || 
+                   msg.subtype === 'bot_message';
+          });
 
           for (const msg of botMessages) {
             const permalink = await this.getMessagePermalink(channelId, msg.ts!);
