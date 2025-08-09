@@ -218,7 +218,7 @@
     "/slack/messages": {
       "get": {
         "operationId": "SlackController_getBotMessages",
-        "summary": "Get bot messages from Slack channels",
+        "summary": "Get all bot messages from Slack channels",
         "parameters": [
           {
             "name": "channelId",
@@ -228,45 +228,11 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of messages to retrieve",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "oldest",
-            "required": false,
-            "in": "query",
-            "description": "Oldest message timestamp",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "latest",
-            "required": false,
-            "in": "query",
-            "description": "Latest message timestamp",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved bot messages",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BotMessagesResponse"
-                }
-              }
-            }
+            "description": "Successfully retrieved all bot messages"
           }
         },
         "tags": [
@@ -1006,39 +972,6 @@
         },
         "required": [
           "query"
-        ]
-      },
-      "BotMessagesResponse": {
-        "type": "object",
-        "properties": {
-          "messages": {
-            "description": "Array of bot messages",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
-          },
-          "stats": {
-            "type": "object",
-            "description": "Message statistics"
-          },
-          "success": {
-            "type": "boolean",
-            "description": "Operation success status",
-            "example": true
-          },
-          "timestamp": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Response timestamp",
-            "example": "2024-01-01T00:00:00.000Z"
-          }
-        },
-        "required": [
-          "messages",
-          "stats",
-          "success",
-          "timestamp"
         ]
       },
       "UpdateMessageRequest": {

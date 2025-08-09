@@ -163,32 +163,20 @@ export class SlackController {
   constructor(private readonly slackService: SlackService) {}
 
   @Get('messages')
-  @ApiOperation({ summary: 'Get bot messages from Slack channels' })
-  @ApiResponse({ status: 200, description: 'Successfully retrieved bot messages', type: BotMessagesResponse })
+  @ApiOperation({ summary: 'Get all bot messages from Slack channels' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved all bot messages' })
   @ApiQuery({ name: 'channelId', required: false, description: 'Slack channel ID' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Number of messages to retrieve' })
-  @ApiQuery({ name: 'oldest', required: false, description: 'Oldest message timestamp' })
-  @ApiQuery({ name: 'latest', required: false, description: 'Latest message timestamp' })
   async getBotMessages(
-    @Query('channelId') channelId?: string,
-    @Query('limit') limit?: string,
-    @Query('oldest') oldest?: string,
-    @Query('latest') latest?: string
-  ): Promise<BotMessagesResponse> {
-    const parsedLimit = limit ? parseInt(limit, 10) : 100;
-    
-    const result = await this.slackService.getBotMessages(
-      channelId,
-      parsedLimit,
-      oldest,
-      latest
-    );
+    @Query('channelId') channelId?: string
+  ) {
+    const result = await this.slackService.getBotMessages(channelId);
 
     return {
       messages: result.messages,
-      stats: result.stats,
-      success: true,
-      timestamp: new Date()
+      total: result.messages.length,
+      totalMessages: result.stats.totalMessages,
+      channelStats: result.stats.channelStats,
+      dateRange: result.stats.dateRange
     };
   }
 

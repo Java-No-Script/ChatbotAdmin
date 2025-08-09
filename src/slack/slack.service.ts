@@ -101,7 +101,7 @@ export class SlackService {
 
   async getBotMessages(
     channelId?: string,
-    limit: number = 100,
+    limit: number = 1000, // 기본값을 1000으로 증가
     oldest?: string,
     latest?: string
   ): Promise<{ messages: SlackMessage[]; stats: SlackMessageStats }> {
